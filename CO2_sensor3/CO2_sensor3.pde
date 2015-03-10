@@ -79,7 +79,7 @@ void setup() {
   sData = nf(dia, 2) +"/"+ nf(mes, 2) +"/"+ ano;
   sHora = nf(hora, 2)  +":"+ nf(min, 2) +":"+ nf(sec, 2);
 
-  fname ="dados_"
+  fname ="logs/dados_"
     + ano + nf(mes, 2)+ nf(dia, 2) + 
     nf(hora, 2) + nf(min, 2) + nf(sec, 2)
     +".csv";
