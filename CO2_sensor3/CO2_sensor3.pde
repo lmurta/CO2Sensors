@@ -23,39 +23,24 @@ String sData, sHora, sDataHora;
 color off = color(4, 79, 111);
 color on = color(84, 145, 158);
 
-GPlot plot2;
+GPlot plot1, plot2;
 color plotColor[] = new color[6];
 color baseColor[] = new color[6];
 
 int px, py, pw, ph, pd, p5x, p5y;
 int numSensors =6;
 int numPoints =0;
-
+float limX = 5000;
 float lastX =0.0;
-float fator[][] = new float[numSensors][3];
+float fator[][] = new float[6][3];
 
 int storedValues_length =10;
 float[][] storedValues = new float[storedValues_length][6];
 int[] count = new int[6];
 float[] sum = new float[6];
 float readAverage;
-/*
-millis = 1/1000 seconds
- 1 hora = 60 min
- 1 dia = 60 * 24 = 1440
- */
-int numHours = 24*4;
-int xTicks = numHours * 1;
-int interval = 10; //in seconds
-int millis_interval = interval * 1000;
 
-int pointsHour = 60 * 60  /1;
-//int millis_interval = 1000 *5; //1sec
-//int millis_interval = 1000 * 60 *1; //1min
-float limX = numHours * 60 * 60 / interval;
-
-int millis_old = 0;
-
+int interval = 600;
 int countPoints = 0;
 
 //http://forum.arduino.cc/index.php/topic,55780.0.html
@@ -100,7 +85,7 @@ void setup() {
     +".csv";
   // foutput = createWriter(fname);
   // First batch of data
-  String data1 =     "i,time,A0,A1,A2,A4";
+  String data1 =     "i,time,A0,A1,A2,A3,A4,A5";
   appendToFile(fname, data1);
 
   fontLight = loadFont("OpenSans-CondensedLight-24.vlw"); 
@@ -136,6 +121,8 @@ void setup() {
   fator[1][1] = 0;
   fator[2][1] = 0;
   fator[3][1] = 0;
+  fator[4][1] = 0;
+  fator[5][1] = 0;
 
 
   fator[0][2] = 100.0/100.0;
@@ -144,6 +131,9 @@ void setup() {
   fator[3][2] = 100.0/100.0;
   fator[4][2] = 100.0/100.0;
   fator[5][2] = 100.0/100.0;
+
+
+
 
 
   plotColor[0] =  color(#B276B2);// (purple)
@@ -165,13 +155,22 @@ void setup() {
   ph = height/8*5;
   pd = 15;
 
+  plot1 = new GPlot(this);
+  plot1.setPos(px, py);
+  plot1.setDim(pw, ph);
+  //plot[i].getTitle().setText("Analog "+i);
+  plot1.getYAxis().getAxisLabel().setText("pH");
+  //plot[i].activateZooming(1.5);
+  plot1.setFixedXLim(true);
+  plot1.setXLim(0.0, 300.0);
+
 
   plot2 = new GPlot(this);
   plot2.setPos(px, py);
   plot2.setDim(pw, ph);
   //plot[i].getTitle().setText("Analog "+i);
   //plot2.getYAxis().getAxisLabel().setText("");
-  //plot2.activateZooming(1.5);
+  plot2.activateZooming(1.5);
   plot2.setFixedXLim(false);
   plot2.setFixedYLim(false);
   plot2.setXLim(0.0, limX);
@@ -182,8 +181,7 @@ void setup() {
   //plot2.setLineWidth(4.0);
   plot2.setMar(5.0, 60.0, 5.0, 5.0);
   //  plot2.getYAxis().setRotateTickLabels(false);
-  plot2.getXAxis().setNTicks(xTicks); 
-  plot2.getXAxis().setRotateTickLabels(true);
+  //plot2.getXAxis().setNTicks(10); 
 
   plot2.activatePointLabels();
   GPointsArray points_C = new GPointsArray();
@@ -210,12 +208,12 @@ void draw() {
     text("No", 55, 22);
   }
   textAlign(RIGHT);
-  // dia = day();  mes = month();  ano = year();
+   dia = day();  mes = month();  ano = year();
   hora = hour();
   min = minute();
   sec = second();
 
-  //  sData = nf(dia, 2) +"/"+ nf(mes, 2) +"/"+ ano;
+    sData = nf(dia, 2) +"/"+ nf(mes, 2) +"/"+ ano;
   sHora = nf(hora, 2)  +":"+ nf(min, 2) +":"+ nf(sec, 2);
   sDataHora = ano + nf(mes, 2) + nf(dia, 2) + nf(hora, 2)  + nf(min, 2) + nf(sec, 2);
   //outputInitialized = true;
@@ -254,11 +252,10 @@ void draw() {
   py+=fontSize;
   py+=fontSize;
 
-  //  if (countPoints < interval) {
-  if (millis() - millis_old <= millis_interval) {
-    //    countPoints++;
+  if (countPoints < interval) {
+
+    countPoints++;
   } else {
-    millis_old = millis();
     String sLog = "";
     for (int i=0; i<numSensors; i++) {
       val = arduino.analogRead(i);     // read the value from the analog sensor
@@ -279,8 +276,9 @@ void draw() {
       fator[i][0]= fator[i][1] + ( fator[i][2] * readAverage );
       //    fator[i][0]=  (float)arduino.analogRead(i) /1024*5;
       plot2.getLayer("sensor_"+i)
-        .addPoint(numPoints,  fator[i][0], ""+nf(fator[i][0], 1, 2));
-      sLog += fator[i][0] +",";
+        .addPoint(numPoints, 
+        fator[i][0], ""+nf(fator[i][0], 1, 2));
+        sLog += fator[i][0] +",";
     }
     if (logData) {
       String data1 =     numPoints +","+ sDataHora+","+sLog;
@@ -298,12 +296,15 @@ void draw() {
     textAlign(LEFT);
     text(":"+i, width-rx, py+(i*fontSize));
   }
+  //GPoint lastPoint = plot2.getLayer("sensor_1").getPointsRef().getLastPoint();
 
+  //float limX = plot2.getXLim()[1];
+  //  if ((lastPoint.getX() >  limX)) {
   if ((numPoints >  (lastX + limX))) {
     lastX = lastX + limX;
     plot2.setXLim(lastX, lastX + limX );
   }
-// if ((numPoints >  (lastX + 10))) {    lastX = lastX + 10;    plot2.setXLim(lastX, lastX + 10 );  }
+
   plot2.beginDraw();
   plot2.drawBackground();
   plot2.drawBox();
